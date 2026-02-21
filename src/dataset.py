@@ -3,7 +3,7 @@ import torch
 from PIL import Image
 
 class Dataset(torch.utils.data.Dataset):
-    def __init__(self, img_dir, label_dir, S=7, B=2, C=2, transform=None):
+    def __init__(self, img_dir, label_dir, S=7, B=2, C=1, transform=None):
         self.img_dir = img_dir
         self.label_dir = label_dir
         self.transform = transform

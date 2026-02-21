@@ -1,5 +1,4 @@
-roadmap.md
-train.py
-predict.py
-2.png
 dataset/
+*.pth
+*.log
+__pycache__/
