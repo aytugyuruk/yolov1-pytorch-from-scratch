@@ -11,12 +11,12 @@ class CNNBlock(nn.Module):
         super().__init__()
         self.conv = nn.Conv2d(in_channels, out_channels, bias=False, **kwargs)
         self.bn = nn.BatchNorm2d(out_channels)
-        self.leakly_relu = nn.LeakyReLU(negative_slope=0.1)
+        self.leaky_relu = nn.LeakyReLU(negative_slope=0.1)
 
     def forward(self, x):
         x = self.conv(x)
         x = self.bn(x)
-        x = self.leakly_relu(x)
+        x = self.leaky_relu(x)
         return x
     
 
