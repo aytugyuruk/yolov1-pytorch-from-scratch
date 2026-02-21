@@ -38,7 +38,7 @@ def intersection_over_union(boxes_preds, boxes_labels):
     box2_area = abs(box2_w * box2_h)
     union_area = box1_area + box2_area - intersection_area
 
-    
+    # I added "+ 1e-6" to the denominator to avoid division by zero error
     return intersection_area / (union_area + 1e-6)
 
 # --- This function is used to perform Non Maximum Suppression on the predicted bounding boxes ---
