@@ -1,57 +1,67 @@
-import torch
 import os
-import pandas as pd
+import torch
 from PIL import Image
 
 class Dataset(torch.utils.data.Dataset):
-    def __init__(self, csv_file, img_dir, label_dir, S, B, C, transform=None):
-        self.annotations = pd.read_csv(csv_file)
+    def __init__(self, img_dir, label_dir, S=7, B=2, C=2, transform=None):
         self.img_dir = img_dir
         self.label_dir = label_dir
         self.transform = transform
         self.S = S
         self.B = B
         self.C = C
+        self.images = sorted([f for f in os.listdir(self.img_dir)if os.path.splitext(f.lower())[1] == ".jpg"])
 
     def __len__(self):
-        return len(self.annotations)
+        return len(self.images)
+
+    def _label_path_from_image(self, img_name: str) -> str:
+        base, _ = os.path.splitext(img_name)
+        return os.path.join(self.label_dir, base + ".txt")
 
     def __getitem__(self, index):
-        label_path = os.path.join(self.label_dir, self.annotations.iloc[index, 1])
-        boxes = []
-        with open(label_path) as f:
-            for line in f.readlines():
-                class_label, x, y, width, height = [
-                    float(x) if float(x) != int(float(x)) else int(x)
-                    for x in line.replace("\n", "").split()
-                ]
-                boxes.append([class_label, x, y, width, height])
+        img_name = self.images[index]
+        img_path = os.path.join(self.img_dir, img_name)
+        label_path = self._label_path_from_image(img_name)
+        image = Image.open(img_path).convert("RGB")
 
-        img_path = os.path.join(self.img_dir, self.annotations.iloc[index, 0])
-        image = Image.open(img_path)
-        boxes = torch.tensor(boxes)
+        boxes = []
+        if os.path.exists(label_path):
+            with open(label_path, "r") as f:
+                for line in f:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    cls, x, y, w, h = line.split()
+                    boxes.append([int(float(cls)), float(x), float(y), float(w), float(h)])
+        else:
+            boxes = []
 
         if self.transform:
             image = self.transform(image)
 
-        label_matrix = torch.zeros((self.S, self.S, self.C + self.B * 5))
+        label_matrix = torch.zeros((self.S, self.S, self.C + self.B * 5), dtype=torch.float32)
 
-        for box in boxes:
-            class_label, x, y, width, height = box.tolist()
-            class_label = int(class_label)
+        box1_coord_start = self.C
+        box1_coord_end   = self.C + 4
+        box1_conf_idx    = self.C + 4
 
-            i, j = int(self.S * y), int(self.S * x)
-            x_cell, y_cell = self.S * x - j, self.S * y - i
+        for (class_label, x, y, width, height) in boxes:
+            x = min(max(x, 0.0), 1.0 - 1e-6)
+            y = min(max(y, 0.0), 1.0 - 1e-6)
 
-            box1_coord_start = self.C
-            box1_coord_end   = self.C + 4
-            box1_conf_idx    = self.C + 4
+            i = int(self.S * y)
+            j = int(self.S * x)
+
+            x_cell = self.S * x - j
+            y_cell = self.S * y - i
 
             if label_matrix[i, j, box1_conf_idx] == 0:
-                label_matrix[i, j, box1_conf_idx] = 1
-                label_matrix[i, j, box1_coord_start:box1_coord_end] = torch.tensor([x_cell, y_cell, width, height])
+                label_matrix[i, j, box1_conf_idx] = 1.0
 
-                if class_label < self.C:
-                    label_matrix[i, j, class_label] = 1
+                label_matrix[i, j, box1_coord_start:box1_coord_end] = torch.tensor([x_cell, y_cell, width, height], dtype=torch.float32)
+
+                if 0 <= class_label < self.C:
+                    label_matrix[i, j, class_label] = 1.0
 
         return image, label_matrix
