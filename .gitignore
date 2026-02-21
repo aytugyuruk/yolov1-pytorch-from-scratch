@@ -1,7 +1,6 @@
 roadmap.md
 train.py
 predict.py
-loss.py
 dataset.py
 
 dataset/
