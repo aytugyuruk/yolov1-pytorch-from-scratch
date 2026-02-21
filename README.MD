@@ -1,7 +1,7 @@
 ### This project is started on the 21 February and still going on.
 
 <p align="center">
-  <img src="figure1.png" width="500">
+  <img src="figure1.png" width="800">
 </p>
 
 <p align="center">
